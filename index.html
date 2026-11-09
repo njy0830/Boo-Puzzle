@@ -374,7 +374,7 @@ class Player {
         this.w = 24; this.h = 24;
         this.vx = 0; this.vy = 0;
         this.speed = 220;
-        this.jumpForce = -760; // 💡 점프 높이 상향 조정 (-620 ➔ -760)
+        this.jumpForce = -850; // 💡 점프력을 대폭 상향하여 높은 플랫폼도 쉽게 등반 가능 (-760 ➔ -850)
         this.grounded = false;
         this.interactPressed = false;
     }
@@ -508,8 +508,12 @@ class PressurePlate {
         });
     }
     draw(color) {
+        // 💡 감압판 렌더링 깔끔하게 수정 (외곽선 추가로 깨짐 현상 방지)
         ctx.fillStyle = this.isPressed ? '#ffffff' : color;
-        ctx.fillRect(this.x, this.y + (this.isPressed ? 4 : 0), this.w, this.h - (this.isPressed ? 4 : 0));
+        ctx.fillRect(this.x, this.y + (this.isPressed ? 5 : 0), this.w, this.h - (this.isPressed ? 5 : 0));
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
     }
 }
 
@@ -542,6 +546,9 @@ class Door {
         } else {
             ctx.fillStyle = color;
             ctx.fillRect(this.x, this.y, this.w, this.h);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(this.x, this.y, this.w, this.h);
         }
     }
 }
@@ -561,10 +568,16 @@ class Lever {
         });
     }
     draw(color) {
-        ctx.fillStyle = '#555';
+        // 💡 레버 렌더링 깔끔하게 수정 (외곽선 추가)
+        ctx.fillStyle = '#444';
         ctx.fillRect(this.x + 6, this.y + 12, 8, 12);
-        ctx.fillStyle = this.isActivated ? color : '#aaa';
+        ctx.strokeStyle = '#111';
+        ctx.strokeRect(this.x + 6, this.y + 12, 8, 12);
+
+        ctx.fillStyle = this.isActivated ? color : '#ccc';
         ctx.fillRect(this.x + (this.isActivated ? 12 : 2), this.y, 6, 16);
+        ctx.strokeStyle = '#000';
+        ctx.strokeRect(this.x + (this.isActivated ? 12 : 2), this.y, 6, 16);
     }
 }
 
@@ -588,6 +601,7 @@ class Box {
         ctx.fillStyle = COLORS.box;
         ctx.fillRect(this.x, this.y, this.w, this.h);
         ctx.strokeStyle = '#8B5A2B';
+        ctx.lineWidth = 1.5;
         ctx.strokeRect(this.x, this.y, this.w, this.h);
     }
 }
