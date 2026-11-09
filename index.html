@@ -554,28 +554,32 @@ class Door {
 
 class Lever {
     constructor(x, y, id) {
-        this.x = x; this.y = y; this.w = 20; this.h = 24;
+        this.x = x; this.y = y; this.w = 24; this.h = 28;
         this.id = id; this.isActivated = false;
     }
     update() {
         const activeGhosts = ghosts.filter(g => g.active);
         const actors = [player, ...activeGhosts];
+        
+        // 레버 주변 감지 히트박스 영역을 여유롭게 확대
+        const interactBox = { x: this.x - 10, y: this.y - 10, w: this.w + 20, h: this.h + 20 };
+        
         actors.forEach(a => {
-            if (a && a.interactPressed && isColliding(a, this)) {
+            if (a && a.interactPressed && isColliding(a, interactBox)) {
                 this.isActivated = true;
             }
         });
     }
     draw(color) {
         ctx.fillStyle = '#444';
-        ctx.fillRect(this.x + 6, this.y + 12, 8, 12);
+        ctx.fillRect(this.x + 8, this.y + 14, 8, 14);
         ctx.strokeStyle = '#111';
-        ctx.strokeRect(this.x + 6, this.y + 12, 8, 12);
+        ctx.strokeRect(this.x + 8, this.y + 14, 8, 14);
 
         ctx.fillStyle = this.isActivated ? color : '#ccc';
-        ctx.fillRect(this.x + (this.isActivated ? 12 : 2), this.y, 6, 16);
+        ctx.fillRect(this.x + (this.isActivated ? 14 : 2), this.y + 2, 8, 18);
         ctx.strokeStyle = '#000';
-        ctx.strokeRect(this.x + (this.isActivated ? 12 : 2), this.y, 6, 16);
+        ctx.strokeRect(this.x + (this.isActivated ? 14 : 2), this.y + 2, 8, 18);
     }
 }
 
@@ -648,15 +652,15 @@ function generateLevelData(lvlIdx) {
         data.plates.push({ x: 100, y: 492, id: 2 });
     }
 
-    // 💡 모든 문(Door)의 상단 영역부터 천장(y:20)까지를 막아주는 고정 차단 벽 자동 생성
+    // 문(Door)의 바로 위쪽 공간을 천장(y:20)까지 막는 고정 상단 벽을 별도 플랫폼으로 배치 (점프 통과 방지)
     data.doors.forEach(d => {
-        const wallHeight = d.y - 20;
-        if (wallHeight > 0) {
+        const topSpace = d.y - 20;
+        if (topSpace > 0) {
             data.platforms.push({
                 x: d.x,
                 y: 20,
                 w: d.w,
-                h: wallHeight
+                h: topSpace
             });
         }
     });
