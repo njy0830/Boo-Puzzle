@@ -374,7 +374,7 @@ class Player {
         this.w = 24; this.h = 24;
         this.vx = 0; this.vy = 0;
         this.speed = 220;
-        this.jumpForce = -850; 
+        this.jumpForce = -750;
         this.grounded = false;
         this.interactPressed = false;
     }
@@ -546,7 +546,7 @@ class Door {
             ctx.fillStyle = color;
             ctx.fillRect(this.x, this.y, this.w, this.h);
             ctx.strokeStyle = '#000';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1.5;
             ctx.strokeRect(this.x, this.y, this.w, this.h);
         }
     }
@@ -617,10 +617,10 @@ function generateLevelData(lvlIdx) {
         spawn: { x: 60, y: 440 },
         exit: { x: 860, y: 430, w: 40, h: 60 },
         platforms: [
-            { x: 0, y: 500, w: 960, h: 40 }, // Ground
-            { x: 0, y: 0, w: 960, h: 20 },   // Ceiling
-            { x: 0, y: 0, w: 20, h: 540 },   // Left Wall
-            { x: 940, y: 0, w: 20, h: 540 }  // Right Wall
+            { x: 0, y: 500, w: 960, h: 40 }, // 바닥
+            { x: 0, y: 0, w: 960, h: 20 },   // 천장
+            { x: 0, y: 0, w: 20, h: 540 },   // 좌측 벽
+            { x: 940, y: 0, w: 20, h: 540 }  // 우측 벽
         ],
         plates: [], doors: [], levers: [], boxes: []
     };
@@ -648,12 +648,18 @@ function generateLevelData(lvlIdx) {
         data.plates.push({ x: 100, y: 492, id: 2 });
     }
 
-    // 모든 문을 천장(y: 20)부터 바닥(y: 500)까지 꽉 채우는 풀사이즈 벽으로 강제 변환하여 위로 뛰어넘지 못하게 처리
-    data.doors = data.doors.map(d => ({
-        ...d,
-        y: 20,
-        h: 480
-    }));
+    // 💡 모든 문(Door)의 상단 영역부터 천장(y:20)까지를 막아주는 고정 차단 벽 자동 생성
+    data.doors.forEach(d => {
+        const wallHeight = d.y - 20;
+        if (wallHeight > 0) {
+            data.platforms.push({
+                x: d.x,
+                y: 20,
+                w: d.w,
+                h: wallHeight
+            });
+        }
+    });
 
     return data;
 }
