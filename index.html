@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boo Puzzle - Time Loop Platformer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            background-color: #0f0e17;
+            color: #fffffe;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            width: 960px;
+            height: 540px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #16161a;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Overlay System */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 14, 23, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 20px;
+        }
+        .hidden { display: none !important; }
+
+        /* Wireframe Home Screen Style */
+        .home-logo-icons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .icon-box {
+            width: 36px; height: 36px;
+            border: 2px solid #ffe45c;
+            background: rgba(255, 228, 92, 0.1);
+            border-radius: 6px;
+        }
+        .icon-box.dashed {
+            border: 2px dashed #72757e;
+            background: transparent;
+        }
+
+        h1.main-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #fffffe;
+            margin-bottom: 5px;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        h1.main-title span.badge {
+            background: #d90429;
+            color: white;
+            font-size: 1.2rem;
+            padding: 2px 8px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-left: -5px;
+            margin-right: -5px;
+        }
+
+        p.subtitle { color: #a7a9be; margin-bottom: 40px; font-size: 1.1rem; }
+
+        .home-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 320px;
+        }
+
+        .btn-menu {
+            background: #16161a;
+            color: #fffffe;
+            border: 2px solid #7f5af0;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .btn-menu:hover {
+            background: #7f5af0;
+            transform: translateY(-2px);
+        }
+
+        .mvp-tag {
+            margin-top: 30px;
+            color: #72757e;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        /* Grid UI for Worlds & Levels */
+        .world-grid, .level-grid {
+            display: grid;
+            gap: 15px;
+            max-width: 800px;
+            width: 100%;
+        }
+        .world-grid { grid-template-columns: repeat(2, 1fr); }
+        .level-grid { grid-template-columns: repeat(6, 1fr); max-height: 320px; overflow-y: auto; padding: 10px; }
+
+        .btn {
+            background: #2cb67d;
+            color: #fffffe;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn:hover { transform: translateY(-3px); filter: brightness(1.1); }
+        .btn-world { height: 100px; text-align: center; }
+        .btn-world span { font-size: 0.8rem; opacity: 0.8; margin-top: 5px; }
+
+        .btn-level {
+            height: 50px;
+            background: #7f5af0;
+            font-size: 1.1rem;
+        }
+        .btn-level.locked {
+            background: #24242f !important;
+            color: #555 !important;
+            cursor: not-allowed !important;
+            border: 1px dashed #444;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: #72757e;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        /* Modal for Controls */
+        .modal {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #16161a;
+            border: 2px solid #7f5af0;
+            padding: 30px;
+            border-radius: 12px;
+            width: 400px;
+            z-index: 20;
+            text-align: center;
+        }
+        .modal h2 { margin-bottom: 15px; color: #ffe45c; }
+        .modal ul { text-align: left; margin-bottom: 20px; list-style: none; padding: 0; line-height: 1.8; color: #a7a9be; }
+        .modal ul li span { color: #fffffe; font-weight: bold; }
+
+        /* HUD Overlay */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            pointer-events: none;
+            z-index: 5;
+            font-weight: bold;
+        }
+        .timer-bar-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 6px;
+            background: rgba(255,255,255,0.1);
+        }
+        #timer-bar {
+            height: 100%;
+            background: #7f5af0;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+        .ghost-legend {
+            display: flex;
+            gap: 12px;
+            font-size: 0.85rem;
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .color-dot { width: 12px; height: 12px; border-radius: 2px; }
+
+        #controls-hint {
+            position: absolute;
+            bottom: 10px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="timer-bar-container"><div id="timer-bar"></div></div>
+    
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+        <div id="loop-info">LOOP 1 / 3</div>
+        <div class="ghost-legend" id="ghost-legend"></div>
+        <div id="time-text">30.0s</div>
+    </div>
+
+    <!-- UI Screen: Home -->
+    <div id="screen-home" class="overlay">
+        <div class="home-logo-icons">
+            <div class="icon-box"></div>
+            <div class="icon-box dashed"></div>
+        </div>
+        <h1 class="main-title">Boo <span class="badge">4</span> Puzzle</h1>
+        <p class="subtitle">과거의 나와 협동하는 시간 루프 퍼즐</p>
+        
+        <div class="home-menu">
+            <button class="btn-menu" onclick="startLevel(maxUnlockedLevel <= 120 ? maxUnlockedLevel : 1)">1. 시작하기 (이어하기)</button>
+            <button class="btn-menu" onclick="openWorldSelect()">2. 레벨 선택</button>
+            <button class="btn-menu" onclick="toggleControlsModal(true)">3. 조작법</button>
+        </div>
+        <div class="mvp-tag">v2 MVP</div>
+    </div>
+
+    <!-- Controls Modal -->
+    <div id="modal-controls" class="modal hidden">
+        <h2>조작법 안내</h2>
+        <ul>
+            <li><span>이동:</span> A / D 또는 좌우 방향키 (◄ / ►)</li>
+            <li><span>점프:</span> Space 또는 위 방향키 (▲)</li>
+            <li><span>상호작용:</span> E (레버 당기기)</li>
+            <li><span>루프 재시작:</span> R (즉시 루프 리셋)</li>
+        </ul>
+        <button class="btn-menu" style="padding: 10px;" onclick="toggleControlsModal(false)">확인</button>
+    </div>
+
+    <!-- UI Screen: World Selection -->
+    <div id="screen-world" class="overlay hidden">
+        <button class="btn back-btn" onclick="showScreen('screen-home')">← 홈으로</button>
+        <h2>월드 선택</h2>
+        <div class="world-grid">
+            <button class="btn btn-world" style="background:#2cb67d" onclick="selectWorld(1)">
+                World 1: 녹색의 연구실
+                <span>기동 훈련 (L1~30) • 3유령</span>
+            </button>
+            <button id="world-btn-2" class="btn btn-world" style="background:#0077b6" onclick="selectWorld(2)">
+                World 2: 푸른 심해 시계탑
+                <span id="w2-desc">L31~60 (잠김)</span>
+            </button>
+            <button id="world-btn-3" class="btn btn-world" style="background:#7209b7" onclick="selectWorld(3)">
+                World 3: 보랏빛 황혼 기지
+                <span id="w3-desc">L61~90 (잠김)</span>
+            </button>
+            <button id="world-btn-4" class="btn btn-world" style="background:#d90429" onclick="selectWorld(4)">
+                World 4: 붉은 동결 요새
+                <span id="w4-desc">L91~120 (잠김)</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- UI Screen: Level Selection -->
+    <div id="screen-level" class="overlay hidden">
+        <button class="btn back-btn" onclick="showScreen('screen-world')">← 월드 선택</button>
+        <h2 id="selected-world-title">World 1</h2>
+        <div class="level-grid" id="level-buttons"></div>
+    </div>
+
+    <!-- UI Screen: Stage Clear -->
+    <div id="screen-clear" class="overlay hidden">
+        <h1 style="color:#5cf29a">STAGE CLEAR!</h1>
+        <p id="clear-stats" class="subtitle">클리어 루프: 2회차</p>
+        <button class="btn" onclick="nextLevel()">다음 레벨로 ▶</button>
+        <button class="btn back-btn" onclick="showScreen('screen-world')">월드 선택</button>
+    </div>
+
+    <!-- Controls Hint -->
+    <div id="controls-hint" class="hidden">이동: A/D 또는 ◄/► | 점프: Space | 상호작용: E | 되감기: R</div>
+
+    <canvas id="canvas" width="960" height="540"></canvas>
+</div>
+
+<script>
+/**
+ * BOO PUZZLE - CORE ENGINE & LEVEL GENERATOR (120 LEVELS)
+ */
+
+const CANVAS_WIDTH = 960;
+const CANVAS_HEIGHT = 540;
+const FIXED_DELTA = 0.02; 
+const MAX_LOOP_TIME = 30.0;
+
+const COLORS = {
+    player: '#FFE45C',
+    ghosts: ['#7FE3FF', '#FFB36B', '#FFFFFF'],
+    exit: '#5CF29A',
+    box: '#D4A373'
+};
+
+const WORLD_THEMES = {
+    1: { name: "녹색의 연구실", color: "#2cb67d", bg: "#0f1715", wall: "#1e3a2b" },
+    2: { name: "푸른 심해 시계탑", color: "#0077b6", bg: "#0a1118", wall: "#112a46" },
+    3: { name: "보랏빛 황혼 기지", color: "#7209b7", bg: "#130a1c", wall: "#2e124d" },
+    4: { name: "붉은 동결 요새", color: "#d90429", bg: "#1c0a0e", wall: "#4a0e17" }
+};
+
+// Canvas Setup
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Game State & Progression (localStorage 연동)
+let maxUnlockedLevel = parseInt(localStorage.getItem('boo_max_unlocked')) || 1;
+let currentWorld = 1;
+let currentLevelIdx = 1;
+let isPlaying = false;
+let loopTime = 0;
+let currentLoop = 1;
+const maxGhostsAllowed = 3;
+
+// Entities & Records
+let player;
+let ghosts = []; 
+let ghostHistories = []; 
+let currentInputHistory = [];
+let levelObjects = { platforms: [], plates: [], doors: [], levers: [], boxes: [], exit: null };
+let keys = {};
+
+// Keyboard Input
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'KeyR' && isPlaying) resetLoop(true);
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// --- Physics Engine & Entities ---
+class Player {
+    constructor(x, y) {
+        this.x = x; this.y = y;
+        this.w = 24; this.h = 24;
+        this.vx = 0; this.vy = 0;
+        this.speed = 220;
+        this.jumpForce = -620;
+        this.grounded = false;
+        this.interactPressed = false;
+    }
+
+    update(dt) {
+        this.vx = 0;
+        if (keys['KeyA'] || keys['ArrowLeft']) this.vx = -this.speed;
+        if (keys['KeyD'] || keys['ArrowRight']) this.vx = this.speed;
+
+        if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && this.grounded) {
+            this.vy = this.jumpForce;
+            this.grounded = false;
+        }
+
+        this.vy += 1200 * dt;
+
+        this.x += this.vx * dt;
+        this.collideX();
+
+        this.y += this.vy * dt;
+        this.collideY();
+
+        this.x = Math.max(0, Math.min(CANVAS_WIDTH - this.w, this.x));
+    }
+
+    collideX() {
+        levelObjects.platforms.concat(levelObjects.doors.filter(d => !d.isOpen)).forEach(wall => {
+            if (isColliding(this, wall)) {
+                if (this.vx > 0) this.x = wall.x - this.w;
+                else if (this.vx < 0) this.x = wall.x + wall.w;
+            }
+        });
+        levelObjects.boxes.forEach(box => {
+            if (isColliding(this, box)) {
+                if (this.vx > 0) { this.x = box.x - this.w; box.move(this.speed * 0.5 * FIXED_DELTA, 0); }
+                else if (this.vx < 0) { this.x = box.x + box.w; box.move(-this.speed * 0.5 * FIXED_DELTA, 0); }
+            }
+        });
+    }
+
+    collideY() {
+        this.grounded = false;
+        const obstacles = [...levelObjects.platforms, ...levelObjects.doors.filter(d => !d.isOpen), ...levelObjects.boxes];
+        obstacles.forEach(wall => {
+            if (isColliding(this, wall)) {
+                if (this.vy > 0) {
+                    this.y = wall.y - this.h;
+                    this.vy = 0;
+                    this.grounded = true;
+                } else if (this.vy < 0) {
+                    this.y = wall.y + wall.h;
+                    this.vy = 0;
+                }
+            }
+        });
+    }
+
+    draw() {
+        ctx.fillStyle = COLORS.player;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(this.x + 5, this.y + 6, 4, 4);
+        ctx.fillRect(this.x + 15, this.y + 6, 4, 4);
+    }
+}
+
+class GhostPlayer {
+    constructor(history, color) {
+        this.history = history; 
+        this.color = color;
+        this.x = 0; this.y = 0;
+        this.w = 24; this.h = 24;
+        this.active = false;
+        this.interactPressed = false;
+        this.trail = [];
+    }
+
+    update(frameIdx) {
+        if (this.history.length === 0) {
+            this.active = false;
+            return;
+        }
+
+        if (frameIdx < this.history.length) {
+            const data = this.history[frameIdx];
+            this.x = data.x;
+            this.y = data.y;
+            this.interactPressed = data.interact;
+            this.active = true;
+
+            this.trail.push({x: this.x, y: this.y, alpha: 0.4});
+            if (this.trail.length > 5) this.trail.shift();
+        } else {
+            const lastData = this.history[this.history.length - 1];
+            this.x = lastData.x;
+            this.y = lastData.y;
+            this.interactPressed = false;
+            this.active = true; 
+        }
+    }
+
+    draw() {
+        if (!this.active) return;
+        this.trail.forEach(t => {
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = t.alpha;
+            ctx.fillRect(t.x, t.y, this.w, this.h);
+            t.alpha -= 0.05;
+        });
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+// --- Interactive Level Objects ---
+class PressurePlate {
+    constructor(x, y, id) {
+        this.x = x; this.y = y; this.w = 40; this.h = 10;
+        this.id = id; this.isPressed = false;
+    }
+    update() {
+        const activeGhosts = ghosts.filter(g => g.active);
+        const actors = [player, ...activeGhosts, ...levelObjects.boxes];
+        
+        this.isPressed = actors.some(a => {
+            if (!a) return false;
+            const plateHitbox = { x: this.x - 2, y: this.y - 6, w: this.w + 4, h: this.h + 10 };
+            return isColliding(a, plateHitbox);
+        });
+    }
+    draw(color) {
+        ctx.fillStyle = this.isPressed ? '#ffffff' : color;
+        ctx.fillRect(this.x, this.y + (this.isPressed ? 4 : 0), this.w, this.h - (this.isPressed ? 4 : 0));
+    }
+}
+
+class Door {
+    constructor(x, y, w, h, id, timer = 0) {
+        this.x = x; this.y = y; this.w = w; this.h = h;
+        this.id = id; this.isOpen = false;
+        this.timer = timer; 
+        this.timerLeft = 0;
+    }
+    trigger() {
+        if (this.timer > 0) this.timerLeft = this.timer;
+        else this.isOpen = true;
+    }
+    update(dt) {
+        if (this.timer > 0) {
+            if (this.timerLeft > 0) {
+                this.timerLeft -= dt;
+                this.isOpen = true;
+            } else {
+                this.isOpen = false;
+            }
+        }
+    }
+    draw(color) {
+        if (this.isOpen) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.x, this.y, this.w, this.h);
+        } else {
+            ctx.fillStyle = color;
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+        }
+    }
+}
+
+class Lever {
+    constructor(x, y, id) {
+        this.x = x; this.y = y; this.w = 20; this.h = 24;
+        this.id = id; this.isActivated = false;
+    }
+    update() {
+        const activeGhosts = ghosts.filter(g => g.active);
+        const actors = [player, ...activeGhosts];
+        actors.forEach(a => {
+            if (a && a.interactPressed && isColliding(a, this)) {
+                this.isActivated = true;
+            }
+        });
+    }
+    draw(color) {
+        ctx.fillStyle = '#555';
+        ctx.fillRect(this.x + 6, this.y + 12, 8, 12);
+        ctx.fillStyle = this.isActivated ? color : '#aaa';
+        ctx.fillRect(this.x + (this.isActivated ? 12 : 2), this.y, 6, 16);
+    }
+}
+
+class Box {
+    constructor(x, y) {
+        this.startX = x; this.startY = y;
+        this.x = x; this.y = y; this.w = 30; this.h = 30;
+        this.vy = 0;
+    }
+    move(dx) { this.x += dx; }
+    update(dt) {
+        this.vy += 1200 * dt;
+        this.y += this.vy * dt;
+        levelObjects.platforms.forEach(wall => {
+            if (isColliding(this, wall)) {
+                if (this.vy > 0) { this.y = wall.y - this.h; this.vy = 0; }
+            }
+        });
+    }
+    draw() {
+        ctx.fillStyle = COLORS.box;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.strokeStyle = '#8B5A2B';
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+    }
+}
+
+function isColliding(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// --- Level Generator Engine (120 Stages) ---
+function generateLevelData(lvlIdx) {
+    const themeIdx = Math.ceil(lvlIdx / 30);
+    const subIdx = ((lvlIdx - 1) % 30) + 1;
+
+    let data = {
+        spawn: { x: 60, y: 440 },
+        exit: { x: 860, y: 430, w: 40, h: 60 },
+        platforms: [
+            { x: 0, y: 500, w: 960, h: 40 }, // Ground
+            { x: 0, y: 0, w: 960, h: 20 },   // Ceiling
+            { x: 0, y: 0, w: 20, h: 540 },   // Left Wall
+            { x: 940, y: 0, w: 20, h: 540 }  // Right Wall
+        ],
+        plates: [], doors: [], levers: [], boxes: []
+    };
+
+    if (subIdx % 4 === 0) {
+        data.platforms.push({ x: 400, y: 350, w: 160, h: 20 });
+        data.doors.push({ x: 700, y: 380, w: 20, h: 120, id: 1 });
+        data.plates.push({ x: 460, y: 342, id: 1 });
+    } else if (subIdx % 4 === 1) {
+        data.platforms.push({ x: 200, y: 380, w: 120, h: 20 }, { x: 500, y: 280, w: 120, h: 20 });
+        data.doors.push({ x: 800, y: 380, w: 20, h: 120, id: 1 });
+        data.plates.push({ x: 240, y: 372, id: 1 }, { x: 540, y: 272, id: 1 });
+    } else if (subIdx % 4 === 2) {
+        data.platforms.push({ x: 300, y: 400, w: 200, h: 20 });
+        data.levers.push({ x: 350, y: 376, id: 1 });
+        data.doors.push({ x: 650, y: 380, w: 20, h: 120, id: 1, timer: 5.0 });
+    } else {
+        data.boxes.push({ x: 250, y: 450 });
+        data.platforms.push({ x: 600, y: 300, w: 200, h: 20 });
+        data.exit = { x: 700, y: 240, w: 40, h: 60 };
+    }
+
+    if (themeIdx >= 3) {
+        data.doors.push({ x: 450, y: 380, w: 20, h: 120, id: 2 });
+        data.plates.push({ x: 100, y: 492, id: 2 });
+    }
+
+    return data;
+}
+
+// --- Screen Navigation & Progression System ---
+function showScreen(id) {
+    document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+    toggleControlsModal(false);
+    if (id) document.getElementById(id).classList.remove('hidden');
+    
+    if (id === 'screen-home' || id === 'screen-world' || id === 'screen-level') {
+        isPlaying = false;
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('controls-hint').classList.add('hidden');
+    }
+}
+
+function openWorldSelect() {
+    // 월드 잠금 상태 동적 반영
+    const w2Unlocked = maxUnlockedLevel >= 31;
+    const w3Unlocked = maxUnlockedLevel >= 61;
+    const w4Unlocked = maxUnlockedLevel >= 91;
+
+    document.getElementById('w2-desc').innerText = w2Unlocked ? "L31~60 • 3유령" : "🔒 L30 클리어 시 해금";
+    document.getElementById('w3-desc').innerText = w3Unlocked ? "L61~90 • 3유령" : "🔒 L60 클리어 시 해금";
+    document.getElementById('w4-desc').innerText = w4Unlocked ? "L91~120 • 3유령" : "🔒 L90 클리어 시 해금";
+
+    showScreen('screen-world');
+}
+
+function toggleControlsModal(show) {
+    const modal = document.getElementById('modal-controls');
+    if (show) modal.classList.remove('hidden');
+    else modal.classList.add('hidden');
+}
+
+function selectWorld(worldNum) {
+    // 월드별 해금 조건 검사 (World 2: 31, World 3: 61, World 4: 91)
+    const requiredLevel = (worldNum - 1) * 30 + 1;
+    if (maxUnlockedLevel < requiredLevel) {
+        alert(`이전 월드를 모두 클리어해야 입장할 수 있습니다! (필요 레벨: L${requiredLevel})`);
+        return;
+    }
+
+    currentWorld = worldNum;
+    const theme = WORLD_THEMES[worldNum];
+    document.getElementById('selected-world-title').innerText = `World ${worldNum}: ${theme.name}`;
+    
+    const grid = document.getElementById('level-buttons');
+    grid.innerHTML = '';
+
+    const startLvl = (worldNum - 1) * 30 + 1;
+    for (let i = startLvl; i < startLvl + 30; i++) {
+        const btn = document.createElement('button');
+        btn.innerText = `L${i}`;
+        
+        if (i <= maxUnlockedLevel) {
+            // 해금된 레벨
+            btn.className = 'btn btn-level';
+            btn.style.background = theme.color;
+            btn.onclick = () => startLevel(i);
+        } else {
+            // 잠긴 레벨
+            btn.className = 'btn btn-level locked';
+            btn.onclick = () => alert("아직 잠겨있는 레벨입니다! 이전 레벨을 먼저 클리어하세요.");
+        }
+        grid.appendChild(btn);
+    }
+    showScreen('screen-level');
+}
+
+function startLevel(lvlIdx) {
+    if (lvlIdx > maxUnlockedLevel) {
+        alert("아직 해금되지 않은 레벨입니다!");
+        return;
+    }
+    currentLevelIdx = lvlIdx;
+    currentWorld = Math.ceil(lvlIdx / 30);
+    ghostHistories = [];
+    showScreen(null);
+    toggleControlsModal(false);
+    
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('controls-hint').classList.remove('hidden');
+    
+    const legend = document.getElementById('ghost-legend');
+    legend.innerHTML = '';
+    for (let i = 0; i < maxGhostsAllowed; i++) {
+        legend.innerHTML += `<div class="legend-item"><div class="color-dot" style="background:${COLORS.ghosts[i]}"></div> G${i+1}</div>`;
+    }
+
+    loadStage(lvlIdx);
+    resetLoop(false);
+    isPlaying = true;
+}
+
+function loadStage(lvlIdx) {
+    const data = generateLevelData(lvlIdx);
+    levelObjects.platforms = data.platforms;
+    levelObjects.exit = data.exit;
+    levelObjects.boxes = data.boxes.map(b => new Box(b.x, b.y));
+    levelObjects.plates = data.plates.map(p => new PressurePlate(p.x, p.y, p.id));
+    levelObjects.doors = data.doors.map(d => new Door(d.x, d.y, d.w, d.h, d.id, d.timer || 0));
+    levelObjects.levers = data.levers.map(l => new Lever(l.x, l.y, l.id));
+    playerSpawn = data.spawn;
+}
+
+let playerSpawn = { x: 60, y: 440 };
+
+function resetLoop(userTriggered = false) {
+    if (userTriggered && currentInputHistory.length > 0) {
+        ghostHistories.push([...currentInputHistory]);
+        if (ghostHistories.length > maxGhostsAllowed) {
+            ghostHistories.shift();
+        }
+        currentLoop++;
+    } else if (!userTriggered) {
+        currentLoop = 1;
+        ghostHistories = [];
+    }
+
+    loopTime = 0;
+    currentInputHistory = [];
+    player = new Player(playerSpawn.x, playerSpawn.y);
+
+    ghosts = ghostHistories.map((hist, i) => new GhostPlayer(hist, COLORS.ghosts[i]));
+
+    levelObjects.boxes.forEach(b => { b.x = b.startX; b.y = b.startY; b.vy = 0; });
+    levelObjects.levers.forEach(l => l.isActivated = false);
+    levelObjects.doors.forEach(d => { d.isOpen = false; d.timerLeft = 0; });
+}
+
+function nextLevel() {
+    if (currentLevelIdx < 120) {
+        startLevel(currentLevelIdx + 1);
+    } else {
+        showScreen('screen-home');
+    }
+}
+
+// --- Main Game Loop & Logic ---
+let lastTime = performance.now();
+let accumulator = 0;
+
+function gameLoop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.1);
+    lastTime = now;
+
+    if (isPlaying) {
+        accumulator += dt;
+        while (accumulator >= FIXED_DELTA) {
+            updateGame(FIXED_DELTA);
+            accumulator -= FIXED_DELTA;
+        }
+        renderGame();
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+function updateGame(dt) {
+    loopTime += dt;
+    const currentFrame = Math.floor(loopTime / FIXED_DELTA);
+
+    if (loopTime >= MAX_LOOP_TIME) {
+        resetLoop(true);
+        return;
+    }
+
+    const interactKey = keys['KeyE'] || false;
+    currentInputHistory.push({ x: player.x, y: player.y, interact: interactKey });
+    player.interactPressed = interactKey;
+
+    player.update(dt);
+    ghosts.forEach(g => g.update(currentFrame));
+    levelObjects.boxes.forEach(b => b.update(dt));
+    levelObjects.plates.forEach(p => p.update());
+    levelObjects.levers.forEach(l => l.update());
+
+    levelObjects.doors.forEach(door => {
+        door.update(dt);
+        
+        const doorPlates = levelObjects.plates.filter(p => p.id === door.id);
+        const doorLevers = levelObjects.levers.filter(l => l.id === door.id);
+
+        const platesSatisfied = doorPlates.length === 0 || doorPlates.every(p => p.isPressed);
+        const leversSatisfied = doorLevers.length === 0 || doorLevers.every(l => l.isActivated);
+        const hasMechanisms = doorPlates.length > 0 || doorLevers.length > 0;
+
+        if (hasMechanisms && platesSatisfied && leversSatisfied) {
+            door.trigger();
+        } else if (door.timer === 0) {
+            door.isOpen = false;
+        }
+    });
+
+    if (isColliding(player, levelObjects.exit)) {
+        isPlaying = false;
+        
+        // 💡 클리어 시 다음 레벨 해금 및 로컬 저장 처리
+        if (currentLevelIdx >= maxUnlockedLevel && currentLevelIdx < 120) {
+            maxUnlockedLevel = currentLevelIdx + 1;
+            localStorage.setItem('boo_max_unlocked', maxUnlockedLevel);
+        }
+
+        document.getElementById('clear-stats').innerText = `Level ${currentLevelIdx} 클리어! (사용 루프: ${currentLoop}회차)`;
+        showScreen('screen-clear');
+    }
+
+    document.getElementById('timer-bar').style.width = `${(1 - loopTime / MAX_LOOP_TIME) * 100}%`;
+    document.getElementById('loop-info').innerText = `LOOP ${currentLoop} (ACTIVE GHOSTS: ${ghosts.filter(g=>g.active).length}/${maxGhostsAllowed})`;
+    document.getElementById('time-text').innerText = `${(MAX_LOOP_TIME - loopTime).toFixed(1)}s`;
+}
+
+function renderGame() {
+    const theme = WORLD_THEMES[currentWorld];
+
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.fillStyle = theme.wall;
+    levelObjects.platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+
+    levelObjects.plates.forEach(p => p.draw(theme.color));
+    levelObjects.doors.forEach(d => d.draw(theme.color));
+    levelObjects.levers.forEach(l => l.draw(theme.color));
+    levelObjects.boxes.forEach(b => b.draw());
+
+    ctx.strokeStyle = COLORS.exit;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(levelObjects.exit.x, levelObjects.exit.y, levelObjects.exit.w, levelObjects.exit.h);
+    ctx.fillStyle = COLORS.exit;
+    ctx.globalAlpha = 0.2;
+    ctx.fillRect(levelObjects.exit.x, levelObjects.exit.y, levelObjects.exit.w, levelObjects.exit.h);
+    ctx.globalAlpha = 1.0;
+
+    ghosts.forEach(g => g.draw());
+    player.draw();
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
