@@ -374,7 +374,7 @@ class Player {
         this.w = 24; this.h = 24;
         this.vx = 0; this.vy = 0;
         this.speed = 220;
-        this.jumpForce = -850; // 💡 점프력을 대폭 상향하여 높은 플랫폼도 쉽게 등반 가능 (-760 ➔ -850)
+        this.jumpForce = -850; 
         this.grounded = false;
         this.interactPressed = false;
     }
@@ -508,7 +508,6 @@ class PressurePlate {
         });
     }
     draw(color) {
-        // 💡 감압판 렌더링 깔끔하게 수정 (외곽선 추가로 깨짐 현상 방지)
         ctx.fillStyle = this.isPressed ? '#ffffff' : color;
         ctx.fillRect(this.x, this.y + (this.isPressed ? 5 : 0), this.w, this.h - (this.isPressed ? 5 : 0));
         ctx.strokeStyle = '#000000';
@@ -568,7 +567,6 @@ class Lever {
         });
     }
     draw(color) {
-        // 💡 레버 렌더링 깔끔하게 수정 (외곽선 추가)
         ctx.fillStyle = '#444';
         ctx.fillRect(this.x + 6, this.y + 12, 8, 12);
         ctx.strokeStyle = '#111';
@@ -649,6 +647,13 @@ function generateLevelData(lvlIdx) {
         data.doors.push({ x: 450, y: 380, w: 20, h: 120, id: 2 });
         data.plates.push({ x: 100, y: 492, id: 2 });
     }
+
+    // 모든 문을 천장(y: 20)부터 바닥(y: 500)까지 꽉 채우는 풀사이즈 벽으로 강제 변환하여 위로 뛰어넘지 못하게 처리
+    data.doors = data.doors.map(d => ({
+        ...d,
+        y: 20,
+        h: 480
+    }));
 
     return data;
 }
